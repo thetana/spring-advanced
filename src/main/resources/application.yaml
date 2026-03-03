@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: Expert
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME} #테이블 명 변경 하기
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update        # 테이블 자동 생성/업데이트 (실무는 validate, none)
+    show-sql: true             # 실행되는 SQL 로그 보기
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: info
+
+jwt:
+  secret:
+    key: ${JWT_KEY}
