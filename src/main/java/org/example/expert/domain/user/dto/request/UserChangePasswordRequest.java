@@ -1,6 +1,7 @@
 package org.example.expert.domain.user.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,9 +10,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserChangePasswordRequest {
-
-    @NotBlank
+    @NotBlank(message = "oldPassword(현재 비밀번호)는 필수입니다.")
     private String oldPassword;
-    @NotBlank
+    @NotBlank(message = "newPassword(새 비밀번호)는 필수입니다.")
+    @Pattern(
+            regexp = "^(?=.*[A-Z])(?=.*\\d).{8,}$",
+            message = "newPassword(새 비밀번호)는 8자 이상이며 숫자와 대문자를 포함해야 합니다."
+    )
     private String newPassword;
 }
