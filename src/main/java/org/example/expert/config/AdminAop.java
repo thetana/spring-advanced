@@ -1,44 +1,90 @@
 package org.example.expert.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 
 @Aspect
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class AdminAop {
-    @Around("execution(* org.example.expert.domain.user.service.UserAdminService.*(..)) || execution(* org.example.expert.domain.comment.service.CommentAdminService.*(..))")
+
+    private final ObjectMapper objectMapper;
+
+    @Around("execution(* org.example.expert.domain..controller..*(..))")
     public Object executionTime(ProceedingJoinPoint joinPoint) throws Throwable {
+
         HttpServletRequest request =
                 ((ServletRequestAttributes) RequestContextHolder
                         .currentRequestAttributes())
                         .getRequest();
+
         String url = request.getRequestURI();
         String method = request.getMethod();
-        Long userId = (Long) request.getAttribute("userId"); // JWT 필터에서 넣었다고 가정
-
-        Object[] args = joinPoint.getArgs();
+        Long userId = (Long) request.getAttribute("userId");
 
         LocalDateTime requestTime = LocalDateTime.now();
 
-        log.info("API 요청 시작");
-        log.info("userId: {}", userId);
-        log.info("time: {}", requestTime);
-        log.info("url: {} {}", method, url);
-        log.info("requestBody: {}", Arrays.toString(args));
-        Object result = joinPoint.proceed(); // 실제 메서드 실행 -> Filter에서 doFilter 와 비슷함.
+        String requestJson = extractRequestBody(joinPoint);
 
-        log.info("responseBody: {}", result);
+        Object result = joinPoint.proceed();
+
+        Object body = result;
+        if (result instanceof ResponseEntity<?> responseEntity) {
+            body = responseEntity.getBody();
+        }
+
+        String responseJson = objectMapper.writeValueAsString(body);
+
+        log.info(
+                "ADMIN_API userId={} time={} {} {} request={} response={}",
+                userId,
+                requestTime,
+                method,
+                url,
+                requestJson,
+                responseJson
+        );
 
         return result;
+    }
+
+    private String extractRequestBody(ProceedingJoinPoint joinPoint) {
+
+        try {
+            for (Object arg : joinPoint.getArgs()) {
+
+                if (arg == null) continue;
+
+                if (arg instanceof HttpServletRequest
+                        || arg instanceof HttpServletResponse
+                        || arg instanceof org.springframework.validation.BindingResult) {
+                    continue;
+                }
+
+                return objectMapper.writeValueAsString(arg);
+            }
+
+        } catch (Exception e) {
+            return "requestBody parse error";
+        }
+
+        return "{}";
     }
 }
